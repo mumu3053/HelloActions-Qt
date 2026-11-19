@@ -57,12 +57,19 @@ jobs:
       - name: 8. 打包生成 APK
         run: |
           cd ${{ github.workspace }}/build
+          echo "===== build 目录实际内容 ====="
+          ls -la
+          SETTINGS=$(find . -maxdepth 1 -name "*deployment-settings.json" | head -n 1)
+          echo "===== 检测到的部署配置文件: $SETTINGS ====="
+          if [ -z "$SETTINGS" ]; then
+            echo "未生成部署配置文件，问题在第6步 qmake"
+            exit 1
+          fi
           androiddeployqt \
-            --input android-libSkySide3gby_Net.so-deployment-settings.json \
+            --input "$SETTINGS" \
             --output android-build \
             --deployment bundled \
             --android-platform android-30 \
-            --jdk $JAVA_HOME \
             --gradle
 
       - name: 9. 上传 APK 编译产物
