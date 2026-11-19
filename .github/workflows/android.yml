@@ -9,54 +9,27 @@ jobs:
   build:
     name: Build Android arm64 APK
     runs-on: ubuntu-latest
+    container:
+      image: stateoftheartio/qt5:5.15.2-android
+      options: --privileged
 
     steps:
       - name: 1. 拉取仓库源码
         uses: actions/checkout@v4
 
-      - name: 2. 安装 Qt 5.15.2 安卓工具链
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: '5.15.2'
-          host: 'linux'
-          target: 'android'
-          arch: 'android_arm64_v8a'
-          dir: '${{ github.workspace }}/qt'
-
-      - name: 3. 安装 JDK 11
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-
-      - name: 4. 安装 Android SDK 与 NDK
-        uses: nttld/setup-ndk@v1
-        id: setup_ndk
-        with:
-          ndk-version: r21e
-
-      - name: 5. 配置安卓环境变量
-        run: |
-          echo "ANDROID_NDK_ROOT=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
-          echo "ANDROID_NDK_HOME=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=${ANDROID_HOME}" >> $GITHUB_ENV
-
-      - name: 安装安卓SDK基础组件
-        run: sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
-
-      - name: 6. 执行 qmake 生成 Makefile
+      - name: 2. 执行 qmake 生成 Makefile
         run: |
           BUILD_DIR=${{ github.workspace }}/build
           mkdir -p $BUILD_DIR
           cd $BUILD_DIR
-          qmake ${{ github.workspace }}/SkySide3gby_Net.pro -spec android-clang CONFIG+=release
+          /opt/qt/5.15.2/android_arm64_v8a/bin/qmake ${{ github.workspace }}/SkySide3gby_Net.pro -spec android-clang CONFIG+=release
 
-      - name: 7. 并行编译源码
+      - name: 3. 并行编译源码
         run: |
           cd ${{ github.workspace }}/build
           make -j$(nproc)
 
-      - name: 8. 打包生成 APK
+      - name: 4. 打包生成 APK
         run: |
           cd ${{ github.workspace }}/build
           androiddeployqt \
@@ -67,7 +40,7 @@ jobs:
             --jdk $JAVA_HOME \
             --gradle
 
-      - name: 9. 上传 APK 编译产物
+      - name: 5. 上传 APK 编译产物
         uses: actions/upload-artifact@v4
         with:
           name: Qt5.15.2-Android-arm64-APK
