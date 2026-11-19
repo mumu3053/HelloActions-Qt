@@ -8,40 +8,41 @@ on:
 jobs:
   build:
     name: Build Android arm64 APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # 官方示例用20.04，兼容性最好
 
     steps:
       - name: 1. 拉取仓库源码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
 
-      - name: 2. 安装 JDK 11
+      - name: 2. 安装 Qt 5.15.2 安卓工具链（官方验证写法，不指定arch）
+        uses: jurplel/install-qt-action@v2
+        with:
+          version: '5.15.2'
+          target: 'android'
+          # Qt5.15.2安卓不需要指定arch参数，指定反而报错
+
+      - name: 3. 安装 JDK 11（Qt5.15.2官方推荐版本）
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '11'
 
-      - name: 3. 安装 Android NDK r21e
+      - name: 4. 安装 Android NDK r21e（Qt5.15.2官方兼容版本）
         uses: nttld/setup-ndk@v1
         id: setup_ndk
         with:
           ndk-version: r21e
 
-      - name: 4. 安装 Qt 5.15.2 安卓工具链（修复版本Bug+国内镜像）
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: '5.15.2'
-          host: 'linux'
-          target: 'android'
-          arch: 'android_arm64_v8a'
-          dir: '${{ github.workspace }}/qt'
-          set-env: true
-          aqtversion: '==3.0.2' # 锁定无包名Bug的旧版本，彻底解决qt_base找不到错误
-          mirror: 'https://mirrors.tuna.tsinghua.edu.cn/qt' # 清华国内镜像，下载快元数据全
-
-      - name: 5. 配置NDK环境变量
+      - name: 5. 配置安卓环境变量
         run: |
           echo "ANDROID_NDK_ROOT=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+          # 自动同意SDK许可协议
+          yes | sdkmanager --licenses > /dev/null 2>&1
+          yes | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" > /dev/null 2>&1
 
       - name: 6. 执行 qmake 生成 Makefile
         run: |
