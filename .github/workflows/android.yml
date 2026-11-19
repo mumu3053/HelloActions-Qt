@@ -34,42 +34,48 @@ jobs:
         with:
           ndk-version: r21e
 
-      - name: 5. 配置安卓环境变量
+      - name: 5. 配置环境变量+自动安装缺失SDK组件（同一步骤执行，无PATH问题）
         run: |
+          # 配置NDK路径
           echo "ANDROID_NDK_ROOT=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
+          
+          # 定位Qt自带SDK根目录
           QT_SDK_ROOT="${{ env.Qt5_Dir }}/../android_sdk"
+          echo "Qt SDK根目录: $QT_SDK_ROOT"
           echo "ANDROID_SDK_ROOT=$QT_SDK_ROOT" >> $GITHUB_ENV
-          # 把Qt自带SDK的工具目录加入PATH
+          
+          # 同时加入新旧版sdkmanager路径，兼容所有SDK版本
+          export PATH="$QT_SDK_ROOT/cmdline-tools/latest/bin:$QT_SDK_ROOT/tools/bin:$QT_SDK_ROOT/platform-tools:$PATH"
+          
+          # 自动同意许可+安装需要的平台组件，不需要yes管道
+          sdkmanager --install "platforms;android-30" "build-tools;30.0.3" --accept-licenses
+          
+          # 把路径写入全局PATH供后续步骤使用
+          echo "$QT_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$QT_SDK_ROOT/tools/bin" >> $GITHUB_PATH
           echo "$QT_SDK_ROOT/platform-tools" >> $GITHUB_PATH
 
-      - name: 6. 安装缺失的Android SDK平台组件
-        run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1
-          yes | sdkmanager "platforms;android-30" "build-tools;30.0.3"
-
-      - name: 7. 执行 qmake 生成 Makefile（只编译arm64-v8a架构）
+      - name: 6. 执行 qmake 生成 Makefile（仅编译arm64-v8a）
         run: |
           BUILD_DIR=${{ github.workspace }}/build
           mkdir -p $BUILD_DIR
           cd $BUILD_DIR
           qmake ${{ github.workspace }}/SkySide3gby_Net.pro -spec android-clang CONFIG+=release "ANDROID_ABIS=arm64-v8a"
 
-      - name: 8. 并行编译源码
+      - name: 7. 并行编译源码
         run: |
           cd ${{ github.workspace }}/build
           make -j$(nproc)
 
-      - name: 9. 安装编译产物到打包目录（关键新增步骤！）
+      - name: 8. 安装编译产物到打包目录
         run: |
           cd ${{ github.workspace }}/build
           make install
 
-      - name: 10. 打包生成 APK
+      - name: 9. 打包生成 APK
         run: |
           cd ${{ github.workspace }}/build
-          # 自动探测部署配置文件名，避免硬编码错误
           SETTINGS=$(find . -maxdepth 1 -name "*deployment-settings.json" | head -n 1)
           androiddeployqt \
             --input "$SETTINGS" \
@@ -79,7 +85,7 @@ jobs:
             --jdk $JAVA_HOME \
             --gradle
 
-      - name: 11. 上传 APK 编译产物
+      - name: 10. 上传 APK 编译产物
         uses: actions/upload-artifact@v4
         with:
           name: Qt5.15.2-Android-arm64-APK
