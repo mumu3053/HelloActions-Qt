@@ -26,14 +26,7 @@ jobs:
         with:
           ndk-version: r21e
 
-      - name: 4. 配置安卓环境变量与SDK
-        run: |
-          echo "ANDROID_NDK_ROOT=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
-          echo "ANDROID_NDK_HOME=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
-          yes | sdkmanager --licenses
-          yes | sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
-
-      - name: 5. 安装 Qt 5.15.2 安卓基础工具链
+      - name: 4. 安装 Qt 5.15.2 安卓工具链（自动安装配置SDK）
         uses: jurplel/install-qt-action@v3
         with:
           version: '5.15.2'
@@ -42,6 +35,12 @@ jobs:
           arch: 'android_arm64_v8a'
           dir: '${{ github.workspace }}/qt'
           set-env: true
+          # 自动安装安卓SDK和对应平台组件，无需手动调用sdkmanager
+
+      - name: 5. 配置NDK环境变量
+        run: |
+          echo "ANDROID_NDK_ROOT=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=${{ steps.setup_ndk.outputs.ndk-path }}" >> $GITHUB_ENV
 
       - name: 6. 执行 qmake 生成 Makefile
         run: |
