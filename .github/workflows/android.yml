@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build Android arm64 APK
-    runs-on: ubuntu-20.04 # 官方示例用20.04，兼容性最好
+    runs-on: ubuntu-22.04 # 官方示例用20.04，兼容性最好
 
     steps:
       - name: 1. 拉取仓库源码
