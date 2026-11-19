@@ -60,7 +60,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/build
           androiddeployqt \
-            --input android-libSkySide3gby_Net.so-deployment-settings.json\
+            --input android-libSkySide3gby_Net.so-deployment-settings.json \
             --output android-build \
             --deployment bundled \
             --android-platform android-30 \
